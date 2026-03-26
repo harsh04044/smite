@@ -60,16 +60,19 @@ impl ScenarioError {
     }
 }
 
-/// Connect to a target and perform the init handshake.
+/// Perform a Noise handshake with a target and receive its `Init` message.
+///
+/// Returns the encrypted connection and the target's `Init`. The caller is
+/// responsible for sending its own `Init` response (e.g., via `Init::echo`).
 ///
 /// # Errors
 ///
-/// Returns an error if connection, handshake, or init exchange fails.
+/// Returns an error if connection, handshake, or init receive fails.
 #[allow(clippy::missing_panics_doc)] // Static keys are known-valid constants
-pub fn connect_to_target<T: Target>(
+pub fn handshake_with_target<T: Target>(
     target: &T,
     timeout: Duration,
-) -> Result<NoiseConnection, ScenarioError> {
+) -> Result<(NoiseConnection, Init), ScenarioError> {
     let local_static = SecretKey::from_byte_array(STATIC_KEY).expect("valid static key");
     let local_ephemeral = SecretKey::from_byte_array(EPHEMERAL_KEY).expect("valid ephemeral key");
 
@@ -87,14 +90,9 @@ pub fn connect_to_target<T: Target>(
         return Err(ScenarioError::Protocol("expected init message".into()));
     };
 
-    // Echo features back, removing TLVs
-    let init = Init::echo(&init);
-    let encoded = Message::Init(init).encode();
-    conn.send_message(&encoded)?;
+    log::debug!("Handshake complete, received target init");
 
-    log::debug!("Connected to target, init exchange complete");
-
-    Ok(conn)
+    Ok((conn, init))
 }
 
 /// Send ping and wait for pong (for synchronization).

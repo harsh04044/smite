@@ -4,11 +4,11 @@ use std::time::Duration;
 
 use secp256k1::SecretKey;
 use smite::bolt;
-use smite::bolt::Message;
+use smite::bolt::{Init, Message};
 use smite::noise::{MAX_MESSAGE_SIZE, NoiseConnection};
 use smite::scenarios::{Scenario, ScenarioResult};
 
-use super::{EPHEMERAL_KEY, STATIC_KEY, connect_to_target, ping_pong};
+use super::{EPHEMERAL_KEY, STATIC_KEY, handshake_with_target, ping_pong};
 use crate::targets::Target;
 
 /// Timeout for connection and message operations.
@@ -37,7 +37,10 @@ impl<T: Target> Scenario for InitScenario<T> {
         // Establish a warmup connection for ping-pong. This warms up the
         // target's message handling code paths before the Nyx snapshot
         // (important for JVM targets like Eclair).
-        let mut warmup_conn = connect_to_target(&target, TIMEOUT).map_err(|e| e.to_string())?;
+        let (mut warmup_conn, target_init) =
+            handshake_with_target(&target, TIMEOUT).map_err(|e| e.to_string())?;
+        let echo = Message::Init(Init::echo(&target_init)).encode();
+        warmup_conn.send_message(&echo).map_err(|e| e.to_string())?;
         ping_pong(&mut warmup_conn).map_err(|e| e.to_string())?;
         drop(warmup_conn);
 

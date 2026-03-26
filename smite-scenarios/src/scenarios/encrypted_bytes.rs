@@ -2,10 +2,11 @@
 
 use std::time::Duration;
 
+use smite::bolt::{Init, Message};
 use smite::noise::NoiseConnection;
 use smite::scenarios::{Scenario, ScenarioResult};
 
-use super::{connect_to_target, ping_pong};
+use super::{handshake_with_target, ping_pong};
 use crate::targets::Target;
 
 /// A scenario that sends raw fuzz input as Lightning messages.
@@ -22,8 +23,10 @@ impl<T: Target> Scenario for EncryptedBytesScenario<T> {
     fn new(_args: &[String]) -> Result<Self, String> {
         let config = T::Config::default();
         let target = T::start(config).map_err(|e| e.to_string())?;
-        let mut conn =
-            connect_to_target(&target, Duration::from_secs(5)).map_err(|e| e.to_string())?;
+        let (mut conn, target_init) =
+            handshake_with_target(&target, Duration::from_secs(5)).map_err(|e| e.to_string())?;
+        let echo = Message::Init(Init::echo(&target_init)).encode();
+        conn.send_message(&echo).map_err(|e| e.to_string())?;
 
         // Warm up the target's message handling path before the Nyx snapshot.
         // For JVM-based targets (i.e. Eclair), this  causes the necessary
