@@ -2,13 +2,12 @@
 
 use std::time::Duration;
 
-use secp256k1::SecretKey;
 use smite::bolt;
 use smite::bolt::{Init, Message};
 use smite::noise::{MAX_MESSAGE_SIZE, NoiseConnection};
 use smite::scenarios::{Scenario, ScenarioResult};
 
-use super::{EPHEMERAL_KEY, STATIC_KEY, handshake_with_target, ping_pong};
+use super::{handshake_with_target, ping_pong};
 use crate::targets::Target;
 
 /// Timeout for connection and message operations.
@@ -46,22 +45,7 @@ impl<T: Target> Scenario for InitScenario<T> {
 
         // Establish the fuzz connection, complete the handshake, and receive
         // the target's init.
-        let local_static = SecretKey::from_byte_array(STATIC_KEY).expect("valid static key");
-        let local_ephemeral =
-            SecretKey::from_byte_array(EPHEMERAL_KEY).expect("valid ephemeral key");
-        let mut conn = NoiseConnection::connect(
-            target.addr(),
-            *target.pubkey(),
-            local_static,
-            local_ephemeral,
-            TIMEOUT,
-        )
-        .map_err(|e| e.to_string())?;
-
-        let init_bytes = conn.recv_message().map_err(|e| e.to_string())?;
-        let Message::Init(_) = Message::decode(&init_bytes).map_err(|e| e.to_string())? else {
-            return Err("expected init message".into());
-        };
+        let (conn, _) = handshake_with_target(&target, TIMEOUT).map_err(|e| e.to_string())?;
 
         Ok(Self { target, conn })
     }
