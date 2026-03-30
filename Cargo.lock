@@ -529,6 +529,7 @@ dependencies = [
  "serde_json",
  "simple_logger",
  "smite",
+ "smite-ir",
  "smite-nyx-sys",
  "tempfile",
  "thiserror",

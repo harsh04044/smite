@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 smite = { path = "../smite" }
+smite-ir = { path = "../smite-ir" }
 smite-nyx-sys = { path = "../smite-nyx-sys", optional = true }
 
 log.workspace = true

@@ -5,5 +5,6 @@
 //! - Scenario implementations that work with any target
 //! - Per-target binaries in `src/bin/`
 
+pub mod executor;
 pub mod scenarios;
 pub mod targets;
